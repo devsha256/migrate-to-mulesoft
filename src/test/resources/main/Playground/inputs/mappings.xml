@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?><Component xmlns:bns="http://api.platform.boomi.com/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" branchId="Qjo1MTcwOTE" branchName="main" componentId="c29f9ffa-f0e7-4cca-a284-b4a3c7477654" createdBy="saddam.a.hossain@accenture.com" createdDate="2025-09-11T11:40:41Z" currentVersion="true" deleted="false" folderFullPath="Training-saddam-hossain/REST" folderId="Rjo3OTYyNjkx" folderName="REST" modifiedBy="saddam.a.hossain@accenture.com" modifiedDate="2025-09-11T11:40:41Z" name="github json to api response" type="transform.map" version="1">
+  <bns:encryptedValues/>
+  <bns:description/>
+  <bns:object>
+    <Map fromProfile="b6943a5a-fc71-4f30-b182-03095b2d6a51" toProfile="ae9b6576-859d-4d56-9df1-0077eeecfd0f">
+      <Mappings>
+        <Mapping fromKey="26" fromKeyPath="*[@key='1']/*[@key='2']/*[@key='26']" fromNamePath="Root/Object/email" fromType="profile" toKey="6" toKeyPath="*[@key='1']/*[@key='2']/*[@key='6']" toNamePath="Root/Object/email" toType="profile"/>
+        <Mapping fromKey="8" fromKeyPath="*[@key='1']/*[@key='2']/*[@key='8']" fromNamePath="Root/Object/url" fromType="profile" toKey="5" toKeyPath="*[@key='1']/*[@key='2']/*[@key='5']" toNamePath="Root/Object/github_profile" toType="profile"/>
+        <Mapping fromKey="22" fromKeyPath="*[@key='1']/*[@key='2']/*[@key='22']" fromNamePath="Root/Object/name" fromType="profile" toFunction="1" toKey="1" toType="function"/>
+        <Mapping fromFunction="1" fromKey="3" fromType="function" toKey="3" toKeyPath="*[@key='1']/*[@key='2']/*[@key='3']" toNamePath="Root/Object/first_name" toType="profile"/>
+        <Mapping fromFunction="1" fromKey="4" fromType="function" toKey="4" toKeyPath="*[@key='1']/*[@key='2']/*[@key='4']" toNamePath="Root/Object/last_name" toType="profile"/>
+      </Mappings>
+      <Functions optimizeExecutionOrder="true">
+        <FunctionStep cacheEnabled="true" cacheOption="none" category="String" key="1" name="String Split" position="1" sumEnabled="false" type="StringSplit" x="10.0" y="10.0">
+          <Inputs>
+            <Input key="1" name="Original String"/>
+          </Inputs>
+          <Outputs>
+            <Output key="3" name="first_name"/>
+            <Output key="4" name="last_name"/>
+          </Outputs>
+          <Configuration>
+            <StringSplit delimiter=" "/>
+          </Configuration>
+        </FunctionStep>
+      </Functions>
+      <Defaults/>
+      <DocumentCacheJoins/>
+    </Map>
+  </bns:object>
+</Component>
