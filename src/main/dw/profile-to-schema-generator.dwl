@@ -1,5 +1,5 @@
 %dw 2.0
-output application/java
+output application/json
 import * from dw::core::Objects
 
 // Helper: Normalize Boomi dataType to XSD type
@@ -40,16 +40,19 @@ fun extractJSONProfile(xmlDoc: Any): Any =
     else
         null
 
-// Recursive function to process XML elements and generate XSD
+// Recursive function to process XML elements and generate XSD with length constraints
 fun processXMLElement(element: Any, indent: String) = do {
     var elementName = element.@name as String default "Unknown"
     var dataType = normalizeXSDType(element.@dataType as String default "character")
     var minOccurs = element.@minOccurs as String default "0"
     var maxOccurs = element.@maxOccurs as String default "1"
+    var minLength = element.@minLength
+    var maxLength = element.@maxLength
     var childElements = element.*XMLElement default []
     var attributes = element.*XMLAttribute default []
     
     var hasComplexContent = !isEmpty(childElements)
+    var hasLengthConstraints = (minLength != null or maxLength != null) and dataType == "string"
     
     ---
     if (hasComplexContent) 
@@ -62,6 +65,30 @@ fun processXMLElement(element: Any, indent: String) = do {
             indent ++ "    <xs:attribute name=\"$(attr.@name as String)\" type=\"xs:$(normalizeXSDType(attr.@dataType as String default "character"))\"" ++
             (if ((attr.@required as String default "false") == "true") " use=\"required\"" else "") ++ "/>\n"
         ) joinBy "") ++
+        indent ++ "  </xs:complexType>\n" ++
+        indent ++ "</xs:element>\n"
+    else if (hasLengthConstraints and isEmpty(attributes))
+        indent ++ "<xs:element name=\"$(elementName)\" minOccurs=\"$(minOccurs)\" maxOccurs=\"$(maxOccurs)\">\n" ++
+        indent ++ "  <xs:simpleType>\n" ++
+        indent ++ "    <xs:restriction base=\"xs:$(dataType)\">\n" ++
+        (if (minLength != null) indent ++ "      <xs:minLength value=\"$(minLength as String)\"/>\n" else "") ++
+        (if (maxLength != null) indent ++ "      <xs:maxLength value=\"$(maxLength as String)\"/>\n" else "") ++
+        indent ++ "    </xs:restriction>\n" ++
+        indent ++ "  </xs:simpleType>\n" ++
+        indent ++ "</xs:element>\n"
+    else if (hasLengthConstraints and !isEmpty(attributes))
+        indent ++ "<xs:element name=\"$(elementName)\" minOccurs=\"$(minOccurs)\" maxOccurs=\"$(maxOccurs)\">\n" ++
+        indent ++ "  <xs:complexType>\n" ++
+        indent ++ "    <xs:simpleContent>\n" ++
+        indent ++ "      <xs:restriction base=\"xs:$(dataType)\">\n" ++
+        (if (minLength != null) indent ++ "        <xs:minLength value=\"$(minLength as String)\"/>\n" else "") ++
+        (if (maxLength != null) indent ++ "        <xs:maxLength value=\"$(maxLength as String)\"/>\n" else "") ++
+        ((attributes map (attr) -> 
+            indent ++ "        <xs:attribute name=\"$(attr.@name as String)\" type=\"xs:$(normalizeXSDType(attr.@dataType as String default "character"))\"" ++
+            (if ((attr.@required as String default "false") == "true") " use=\"required\"" else "") ++ "/>\n"
+        ) joinBy "") ++
+        indent ++ "      </xs:restriction>\n" ++
+        indent ++ "    </xs:simpleContent>\n" ++
         indent ++ "  </xs:complexType>\n" ++
         indent ++ "</xs:element>\n"
     else
@@ -99,10 +126,12 @@ fun convertXMLProfileToXSD(profile: Any) = do {
     "</xs:schema>"
 }
 
-// Recursive function to process JSON elements and build schema properties
+// Recursive function to process JSON elements and build schema properties with length constraints
 fun processJSONElement(element: Any): Any = do {
     var elementName = element.@name as String default "Unknown"
     var dataType = element.@dataType as String default "character"
+    var minLength = element.@minLength
+    var maxLength = element.@maxLength
     
     var jsonObject = element.JSONObject
     var jsonArray = element.JSONArray
@@ -116,6 +145,8 @@ fun processJSONElement(element: Any): Any = do {
             "properties": objectEntries reduce (entry, acc = {}) -> do {
                 var entryName = entry.@name as String
                 var entryDataType = normalizeJSONSchemaType(entry.@dataType as String default "character")
+                var entryMinLength = entry.@minLength
+                var entryMaxLength = entry.@maxLength
                 var nestedArray = entry.JSONArray
                 var nestedObject = entry.JSONObject
                 ---
@@ -125,6 +156,12 @@ fun processJSONElement(element: Any): Any = do {
                             processJSONElement(entry)
                         else if (nestedObject != null)
                             processJSONElement(entry)
+                        else if (entryDataType == "string" and (entryMinLength != null or entryMaxLength != null))
+                            {
+                                "type": entryDataType
+                            } 
+                            ++ (if (entryMinLength != null) { "minLength": entryMinLength as Number } else {})
+                            ++ (if (entryMaxLength != null) { "maxLength": entryMaxLength as Number } else {})
                         else
                             { "type": entryDataType }
                 }
@@ -139,6 +176,12 @@ fun processJSONElement(element: Any): Any = do {
             "items": if (arrayElement != null) processJSONElement(arrayElement) else { "type": "object" }
         }
     }
+    else if (dataType == "string" and (minLength != null or maxLength != null))
+        {
+            "type": normalizeJSONSchemaType(dataType)
+        }
+        ++ (if (minLength != null) { "minLength": minLength as Number } else {})
+        ++ (if (maxLength != null) { "maxLength": maxLength as Number } else {})
     else
         { "type": normalizeJSONSchemaType(dataType) }
 }
